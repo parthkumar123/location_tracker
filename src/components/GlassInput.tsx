@@ -6,7 +6,6 @@ import {
   TextInputProps,
   Text,
 } from "react-native";
-import { MotiView } from "moti";
 import { colors, typography, theme } from "../theme";
 
 interface GlassInputProps extends TextInputProps {
@@ -25,15 +24,12 @@ export const GlassInput: React.FC<GlassInputProps> = ({
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <MotiView
-        animate={{
-          borderColor: isFocused ? colors.cyan : colors.glassLight,
-        }}
-        transition={{
-          type: "timing",
-          duration: 200,
-        }}
-        style={[styles.inputContainer, error && styles.errorBorder]}
+      <View
+        style={[
+          styles.inputContainer,
+          { borderColor: isFocused ? colors.cyan : colors.glassLight },
+          error && styles.errorBorder,
+        ]}
       >
         <TextInput
           {...props}
@@ -48,7 +44,7 @@ export const GlassInput: React.FC<GlassInputProps> = ({
             props.onBlur?.(e);
           }}
         />
-      </MotiView>
+      </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );

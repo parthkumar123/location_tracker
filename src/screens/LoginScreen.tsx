@@ -6,10 +6,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from "react-native";
+import { useAlert } from "../hooks/useAlert";
 import { LinearGradient } from "expo-linear-gradient";
-import { MotiView } from "moti";
+import { AnimatedView } from "../components/AnimatedView";
 import { GlassCard, GlassButton, GlassInput } from "../components";
 import { colors, typography, spacing, theme } from "../theme";
 import { authService } from "../services/auth";
@@ -23,10 +23,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { showAlert } = useAlert();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password");
+      showAlert("Error", "Please enter both email and password", "error");
       return;
     }
 
@@ -35,7 +36,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const user = await authService.signIn(email, password);
       onLoginSuccess(user);
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message || "Invalid credentials");
+      showAlert("Login Failed", error.message || "Invalid credentials", "error");
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       />
 
       {/* Animated neon orbs in background */}
-      <MotiView
+      <AnimatedView
         from={{
           opacity: 0.3,
           scale: 1,
@@ -68,7 +69,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         }}
         style={[styles.orb, styles.orbCyan]}
       />
-      <MotiView
+      <AnimatedView
         from={{
           opacity: 0.3,
           scale: 1.2,
@@ -93,7 +94,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <MotiView
+          <AnimatedView
             from={{
               opacity: 0,
               translateY: -50,
@@ -156,7 +157,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <Text style={styles.footerText}>
               © 2026 Location Tracker • Secured by Firebase
             </Text>
-          </MotiView>
+          </AnimatedView>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

@@ -5,3 +5,7 @@ export { PulsingDot } from "./PulsingDot";
 export { SwipeToConfirm } from "./SwipeToConfirm";
 export { ErrorBoundary } from "./ErrorBoundary";
 export { PermissionDenied } from "./PermissionDenied";
+export { SideMenu } from "./SideMenu";
+export { CustomAlert } from "./CustomAlert";
+export type { AlertType } from "./CustomAlert";
+export type { AlertButton } from "./CustomAlert";

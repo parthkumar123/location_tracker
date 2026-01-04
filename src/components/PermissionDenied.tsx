@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { MotiView } from "moti";
+import { AnimatedView } from "./AnimatedView";
 import { AlertCircle, Settings } from "lucide-react-native";
 import { GlassCard } from "./GlassCard";
 import { colors, typography, spacing, theme } from "../theme";
@@ -29,7 +29,7 @@ export const PermissionDenied: React.FC<PermissionDeniedProps> = ({
         style={StyleSheet.absoluteFillObject}
       />
 
-      <MotiView
+      <AnimatedView
         from={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "timing", duration: 600 }}
@@ -69,7 +69,7 @@ export const PermissionDenied: React.FC<PermissionDeniedProps> = ({
             )}
           </View>
         </GlassCard>
-      </MotiView>
+      </AnimatedView>
     </View>
   );
 };

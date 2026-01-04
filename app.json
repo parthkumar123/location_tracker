@@ -28,7 +28,7 @@
         "backgroundColor": "#0f172a"
       },
       "package": "com.yourcompany.locationtracker",
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_FINE_LOCATION",

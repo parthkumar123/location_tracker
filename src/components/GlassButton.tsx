@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
 import { TouchableOpacity, StyleSheet, ViewStyle } from "react-native";
-import { MotiView } from "moti";
+import { AnimatedView } from "./AnimatedView";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, theme } from "../theme";
 
@@ -26,7 +26,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
         disabled={disabled}
         activeOpacity={0.8}
       >
-        <MotiView
+        <AnimatedView
           from={{ scale: 1 }}
           animate={{ scale: 1 }}
           transition={{
@@ -43,7 +43,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
           >
             {children}
           </LinearGradient>
-        </MotiView>
+        </AnimatedView>
       </TouchableOpacity>
     );
   }
@@ -55,7 +55,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
         disabled={disabled}
         activeOpacity={0.8}
       >
-        <MotiView
+        <AnimatedView
           from={{ scale: 1 }}
           animate={{ scale: 1 }}
           transition={{
@@ -65,14 +65,14 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
           style={[styles.button, styles.outlineButton, style]}
         >
           {children}
-        </MotiView>
+        </AnimatedView>
       </TouchableOpacity>
     );
   }
 
   return (
     <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.8}>
-      <MotiView
+      <AnimatedView
         from={{ scale: 1 }}
         animate={{ scale: 1 }}
         transition={{
@@ -82,7 +82,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
         style={[styles.button, styles.secondaryButton, style]}
       >
         {children}
-      </MotiView>
+      </AnimatedView>
     </TouchableOpacity>
   );
 };

@@ -4,6 +4,8 @@ export interface User {
   displayName: string;
   role: "admin" | "employee";
   createdAt: Date;
+  photoURL?: string;
+  phoneNumber?: string;
 }
 
 export interface Location {

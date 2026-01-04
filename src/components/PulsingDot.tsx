@@ -1,8 +1,6 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { MotiView } from "moti";
+import { View, StyleSheet, Animated } from "react-native";
 import { colors } from "../theme";
-import { Easing } from "react-native-reanimated";
 
 interface PulsingDotProps {
   size?: number;
@@ -15,6 +13,26 @@ export const PulsingDot: React.FC<PulsingDotProps> = ({
   color = colors.cyan,
   pulseScale = 2,
 }) => {
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0.7)).current;
+
+  React.useEffect(() => {
+    const animation = Animated.parallel([
+      Animated.timing(scaleAnim, {
+        toValue: pulseScale,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    Animated.loop(animation).start();
+  }, [scaleAnim, opacityAnim, pulseScale]);
+
   return (
     <View
       style={[
@@ -23,21 +41,7 @@ export const PulsingDot: React.FC<PulsingDotProps> = ({
       ]}
     >
       {/* Pulsing ring */}
-      <MotiView
-        from={{
-          opacity: 0.7,
-          scale: 1,
-        }}
-        animate={{
-          opacity: 0,
-          scale: pulseScale,
-        }}
-        transition={{
-          type: "timing",
-          duration: 2000,
-          easing: Easing.out(Easing.ease),
-          loop: true,
-        }}
+      <Animated.View
         style={[
           styles.pulse,
           {
@@ -45,6 +49,8 @@ export const PulsingDot: React.FC<PulsingDotProps> = ({
             height: size,
             borderRadius: size / 2,
             backgroundColor: color,
+            transform: [{ scale: scaleAnim }],
+            opacity: opacityAnim,
           },
         ]}
       />

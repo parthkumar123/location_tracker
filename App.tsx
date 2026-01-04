@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View, ActivityIndicator, Text } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LoginScreen } from "./src/screens/LoginScreen";
-import { EmployeeHome } from "./src/screens/EmployeeHome";
-import { AdminDashboard } from "./src/screens/AdminDashboard";
-import { ErrorBoundary } from "./src/components";
+import { AppNavigator } from "./src/navigation/AppNavigator";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import { AlertProvider } from "./src/hooks/useAlert";
 import { authService } from "./src/services/auth";
 import { User } from "./src/types";
 import { colors } from "./src/theme";
@@ -43,17 +43,16 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={styles.container}>
-        <StatusBar style="light" />
-
-        {!user ? (
-          <LoginScreen onLoginSuccess={handleLoginSuccess} />
-        ) : user.role === "admin" ? (
-          <AdminDashboard user={user} onLogout={handleLogout} />
-        ) : (
-          <EmployeeHome user={user} onLogout={handleLogout} />
-        )}
-      </GestureHandlerRootView>
+      <AlertProvider>
+        <SafeAreaView style={styles.container} edges={["top"]}>
+          <StatusBar style="light" translucent={false} />
+          {!user ? (
+            <LoginScreen onLoginSuccess={handleLoginSuccess} />
+          ) : (
+            <AppNavigator user={user} onLogout={handleLogout} />
+          )}
+        </SafeAreaView>
+      </AlertProvider>
     </ErrorBoundary>
   );
 }

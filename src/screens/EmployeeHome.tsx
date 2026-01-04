@@ -4,29 +4,27 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigationMenu } from "../navigation/NavigationContext";
+import { useCustomNavigation } from "../navigation/CustomNavigator";
+import { useUserContext } from "../navigation/UserContext";
+import { useAlert } from "../hooks/useAlert";
 import { LinearGradient } from "expo-linear-gradient";
-import { MotiView } from "moti";
-import { Clock, MapPin, Battery, LogOut } from "lucide-react-native";
+import { AnimatedView } from "../components/AnimatedView";
+import { Clock, MapPin, Battery, Menu } from "lucide-react-native";
 import { GlassCard, PulsingDot } from "../components";
 import { SwipeToConfirm } from "../components/SwipeToConfirm";
 import { colors, typography, spacing, theme } from "../theme";
 import { locationService } from "../services/location";
-import { authService } from "../services/auth";
-import { User, TrackingStats } from "../types";
+import { TrackingStats } from "../types";
 
-interface EmployeeHomeProps {
-  user: User;
-  onLogout: () => void;
-}
-
-export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
-  user,
-  onLogout,
-}) => {
+export const EmployeeHome: React.FC = () => {
+  const navigation = useCustomNavigation();
+  const { openMenu } = useNavigationMenu();
+  const { user, onLogout } = useUserContext();
+  const { showAlert } = useAlert();
   const [isTracking, setIsTracking] = useState(false);
   const [stats, setStats] = useState<TrackingStats>({
     hoursWorked: 0,
@@ -38,6 +36,31 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
     checkTrackingStatus();
     loadStats();
   }, []);
+
+  // Separate effect for periodic location saving
+  useEffect(() => {
+    let locationInterval: NodeJS.Timeout | null = null;
+    
+    if (isTracking) {
+      // Save location immediately when tracking starts
+      locationService.saveCurrentLocation(user.uid).catch((error) => {
+        console.error("Error saving initial location:", error);
+      });
+      
+      // Then save every 30 seconds
+      locationInterval = setInterval(() => {
+        locationService.saveCurrentLocation(user.uid).catch((error) => {
+          console.error("Error saving periodic location:", error);
+        });
+      }, 30000);
+    }
+    
+    return () => {
+      if (locationInterval) {
+        clearInterval(locationInterval);
+      }
+    };
+  }, [isTracking, user.uid]);
 
   const checkTrackingStatus = async () => {
     const tracking = await locationService.isTracking();
@@ -58,40 +81,28 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
       if (isTracking) {
         await locationService.stopTracking();
         setIsTracking(false);
-        Alert.alert("Tracking Stopped", "Location tracking has been disabled");
+        showAlert("Tracking Stopped", "Location tracking has been disabled", "info");
       } else {
         const hasPermission = await locationService.requestPermissions();
 
         if (!hasPermission) {
-          Alert.alert(
+          showAlert(
             "Permission Required",
-            "Location permission is required for tracking. Please enable it in settings."
+            "Location permission is required for tracking. Please enable it in settings.",
+            "warning"
           );
           return;
         }
 
         await locationService.startTracking(user.uid);
         setIsTracking(true);
-        Alert.alert("Tracking Started", "Your location is now being tracked");
+        showAlert("Tracking Started", "Your location is now being tracked", "success");
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to toggle tracking");
+      showAlert("Error", error.message || "Failed to toggle tracking", "error");
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          await authService.signOut();
-          onLogout();
-        },
-      },
-    ]);
-  };
 
   return (
     <View style={styles.container}>
@@ -101,16 +112,20 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
         style={StyleSheet.absoluteFillObject}
       />
 
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <TouchableOpacity
+            onPress={openMenu}
+            style={styles.menuButton}
+          >
+            <Menu size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.userName}>{user.displayName}</Text>
           </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <LogOut size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.headerRight} />
         </View>
 
         <ScrollView
@@ -118,7 +133,7 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
           showsVerticalScrollIndicator={false}
         >
           {/* Status Card */}
-          <MotiView
+          <AnimatedView
             from={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: "timing", duration: 600 }}
@@ -144,7 +159,7 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
 
               {/* Breathing animation ring when tracking */}
               {isTracking && (
-                <MotiView
+                <AnimatedView
                   from={{ scale: 1, opacity: 0.5 }}
                   animate={{ scale: 1.1, opacity: 0.8 }}
                   transition={{
@@ -156,10 +171,10 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
                 />
               )}
             </GlassCard>
-          </MotiView>
+          </AnimatedView>
 
           {/* Swipe to Toggle */}
-          <MotiView
+          <AnimatedView
             from={{ opacity: 0, translateY: 20 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: "timing", duration: 600, delay: 200 }}
@@ -171,11 +186,11 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
               activeText="Swipe to Stop"
               inactiveText="Swipe to Start"
             />
-          </MotiView>
+          </AnimatedView>
 
           {/* Stats Cards */}
           <View style={styles.statsGrid}>
-            <MotiView
+            <AnimatedView
               from={{ opacity: 0, translateY: 20 }}
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: "timing", duration: 600, delay: 300 }}
@@ -190,9 +205,9 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
                 </Text>
                 <Text style={styles.statLabel}>Hours Worked</Text>
               </GlassCard>
-            </MotiView>
+            </AnimatedView>
 
-            <MotiView
+            <AnimatedView
               from={{ opacity: 0, translateY: 20 }}
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: "timing", duration: 600, delay: 400 }}
@@ -207,9 +222,9 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
                 </Text>
                 <Text style={styles.statLabel}>Distance</Text>
               </GlassCard>
-            </MotiView>
+            </AnimatedView>
 
-            <MotiView
+            <AnimatedView
               from={{ opacity: 0, translateY: 20 }}
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: "timing", duration: 600, delay: 500 }}
@@ -222,7 +237,7 @@ export const EmployeeHome: React.FC<EmployeeHomeProps> = ({
                 <Text style={styles.statValue}>{stats.batteryLevel}%</Text>
                 <Text style={styles.statLabel}>Battery</Text>
               </GlassCard>
-            </MotiView>
+            </AnimatedView>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -256,8 +271,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: typography.letterSpacing.wide,
   },
-  logoutButton: {
+  menuButton: {
     padding: spacing.sm,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerRight: {
+    width: 40,
   },
   scrollContent: {
     padding: spacing.lg,

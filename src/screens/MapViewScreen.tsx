@@ -3,28 +3,26 @@ import React, {
   useRef,
   useState,
   useCallback,
-  useMemo,
 } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
-  Alert,
+  Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigationMenu } from "../navigation/NavigationContext";
+import { useCustomNavigation } from "../navigation/CustomNavigator";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-// Temporarily disabled for Expo Go compatibility
-// import BottomSheet, { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { AnimatedView } from "../components/AnimatedView";
-import { LogOut, MapPin, Clock } from "lucide-react-native";
+import { Menu, MapPin, Clock, RefreshCw } from "lucide-react-native";
 import { GlassCard, PulsingDot } from "../components";
 import { colors, typography, spacing, theme } from "../theme";
 import { darkMapStyle } from "../config/constants";
-import { authService } from "../services/auth";
 import { locationService } from "../services/location";
-import { User, EmployeeStatus, Location as LocationData } from "../types";
+import { EmployeeStatus } from "../types";
 import {
   collection,
   query,
@@ -34,36 +32,61 @@ import {
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 
-interface AdminDashboardProps {
-  user: User;
-  onLogout: () => void;
-}
-
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({
-  user,
-  onLogout,
-}) => {
+export const MapViewScreen: React.FC = () => {
+  const navigation = useCustomNavigation();
+  const { openMenu } = useNavigationMenu();
   const mapRef = useRef<MapView>(null);
-  // const bottomSheetRef = useRef<BottomSheet>(null);
   const [employees, setEmployees] = useState<EmployeeStatus[]>([]);
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeStatus | null>(null);
-  // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const [refreshing, setRefreshing] = useState(false);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadEmployees();
 
     // Listen to location updates in real-time
-    const unsubscribe = onSnapshot(collection(db, "locations"), (snapshot) => {
-      updateEmployeeLocations();
+    const unsubscribeLocations = onSnapshot(collection(db, "locations"), () => {
+      loadEmployees();
+    });
+    
+    // Also listen to users collection for any user changes
+    const unsubscribeUsers = onSnapshot(collection(db, "users"), () => {
+      loadEmployees();
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeLocations();
+      unsubscribeUsers();
+    };
   }, []);
 
-  const loadEmployees = async () => {
+  // Add rotation animation for refresh icon
+  useEffect(() => {
+    if (refreshing) {
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      rotateAnim.setValue(0);
+    }
+  }, [refreshing, rotateAnim]);
+  
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const loadEmployees = async (showLoading = false) => {
+    if (showLoading) {
+      setRefreshing(true);
+    }
+    
     try {
-      // Get all users with employee role
       const usersQuery = query(
         collection(db, "users"),
         where("role", "==", "employee")
@@ -74,11 +97,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         usersSnapshot.docs.map(async (doc) => {
           const userData = doc.data();
           const location = await locationService.getLatestLocation(doc.id);
-
+          
+          // Check if there are multiple recent locations (indicating active tracking)
+          const recentLocationsCount = location 
+            ? await locationService.getRecentLocationsCount(doc.id, 3)
+            : 0;
+          
+          // User is online if:
+          // 1. They have a location within 2 minutes, OR
+          // 2. They have multiple locations within 3 minutes (indicating active tracking)
+          const hasVeryRecentLocation = location && isRecentLocation(location.timestamp, 2);
+          const hasActiveTracking = recentLocationsCount >= 2; // At least 2 locations in last 3 minutes
+          const isOnline = hasVeryRecentLocation || hasActiveTracking;
+          
           return {
             userId: doc.id,
             displayName: userData.displayName,
-            isOnline: location ? isRecentLocation(location.timestamp) : false,
+            isOnline,
             lastActive: location?.timestamp || new Date(),
             currentLocation: location
               ? { lat: location.lat, lng: location.lng }
@@ -90,17 +125,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setEmployees(employeeList);
     } catch (error) {
       console.error("Error loading employees:", error);
+    } finally {
+      if (showLoading) {
+        setRefreshing(false);
+      }
     }
   };
 
-  const updateEmployeeLocations = async () => {
-    // Update employee locations in real-time
-    loadEmployees();
+  const handleRefresh = async () => {
+    await loadEmployees(true);
   };
 
-  const isRecentLocation = (timestamp: Date): boolean => {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return new Date(timestamp) > fiveMinutesAgo;
+  const isRecentLocation = (timestamp: Date | any, minutes: number = 2): boolean => {
+    if (!timestamp) {
+      return false;
+    }
+    
+    // Handle Firestore Timestamp
+    let date: Date;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      date = timestamp.toDate();
+    } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000);
+    } else if (timestamp instanceof Date) {
+      date = timestamp;
+    } else {
+      date = new Date(timestamp);
+    }
+    
+    if (isNaN(date.getTime())) {
+      return false;
+    }
+    
+    const now = Date.now();
+    const dateTime = date.getTime();
+    const cutoffTime = new Date(now - minutes * 60 * 1000);
+    const isRecent = dateTime > cutoffTime.getTime();
+    
+    return isRecent;
   };
 
   const handleEmployeePress = useCallback((employee: EmployeeStatus) => {
@@ -116,25 +178,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         },
         1000
       );
-
-      // Minimize bottom sheet to show map (disabled for Expo Go)
-      // bottomSheetRef.current?.snapToIndex(0);
     }
   }, []);
-
-  const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          await authService.signOut();
-          onLogout();
-        },
-      },
-    ]);
-  };
 
   const renderEmployeeItem = ({ item }: { item: EmployeeStatus }) => (
     <TouchableOpacity
@@ -189,16 +234,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     </TouchableOpacity>
   );
 
-  const formatLastActive = (date: Date): string => {
-    const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
-    const minutes = Math.floor(diff / 60000);
-
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
+  const formatLastActive = (date: Date | undefined): string => {
+    if (!date) return "Never";
+    
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      if (isNaN(dateObj.getTime())) return "Never";
+      
+      const now = new Date();
+      const diff = now.getTime() - dateObj.getTime();
+      if (diff < 0) return "Just now";
+      
+      const minutes = Math.floor(diff / 60000);
+      if (minutes < 1) return "Just now";
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      return `${Math.floor(hours / 24)}d ago`;
+    } catch (error) {
+      return "Never";
+    }
   };
 
   const initialRegion = {
@@ -217,6 +272,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         style={styles.map}
         initialRegion={initialRegion}
         customMapStyle={darkMapStyle}
+        mapPadding={{ top: 0, right: 0, bottom: 0, left: 0 }}
       >
         {employees.map((employee) =>
           employee.currentLocation ? (
@@ -262,22 +318,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </MapView>
 
       {/* Header */}
-      <SafeAreaView style={styles.header}>
+      <SafeAreaView style={styles.header} edges={["top"]}>
         <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.headerTitle}>Admin Dashboard</Text>
+          <TouchableOpacity
+            onPress={openMenu}
+            style={styles.menuButton}
+          >
+            <Menu size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Map View</Text>
             <Text style={styles.headerSubtitle}>
               {employees.filter((e) => e.isOnline).length} Online •{" "}
               {employees.length} Total
             </Text>
           </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <LogOut size={24} color={colors.textPrimary} />
+          <TouchableOpacity
+            onPress={handleRefresh}
+            style={styles.refreshButton}
+            disabled={refreshing}
+          >
+            <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+              <RefreshCw 
+                size={24} 
+                color={refreshing ? colors.textMuted : colors.cyan}
+              />
+            </Animated.View>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
 
-      {/* Bottom Sheet - Replaced with simple View for Expo Go compatibility */}
+      {/* Bottom Sheet */}
       <View style={styles.bottomSheetContainer}>
         <View style={styles.bottomSheetBackground}>
           <View style={styles.handleIndicator} />
@@ -315,13 +386,23 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: "rgba(15, 23, 42, 0.9)",
     borderBottomWidth: 1,
     borderBottomColor: colors.glassLight,
+  },
+  menuButton: {
+    padding: spacing.sm,
+    marginRight: spacing.md,
+  },
+  headerTitleContainer: {
+    flex: 1,
+  },
+  refreshButton: {
+    padding: spacing.sm,
+    marginLeft: spacing.md,
   },
   headerTitle: {
     fontSize: typography.fontSize.xl,
@@ -333,9 +414,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     marginTop: 2,
-  },
-  logoutButton: {
-    padding: spacing.sm,
   },
   bottomSheetContainer: {
     position: "absolute",
@@ -444,3 +522,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 });
+
