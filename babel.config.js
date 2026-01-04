@@ -2,8 +2,6 @@ module.exports = function (api) {
   api.cache(true);
   return {
     presets: ["babel-preset-expo"],
-    // Temporarily disabled for Expo Go compatibility
-    // plugins: ["react-native-reanimated/plugin"],
     plugins: [
       [
         "module:react-native-dotenv",
@@ -14,6 +12,8 @@ module.exports = function (api) {
           allowUndefined: true,
         },
       ],
+      // react-native-reanimated plugin must be listed last
+      "react-native-reanimated/plugin",
     ],
   };
 };

@@ -1,6 +1,7 @@
 // Firebase Configuration
-// Values are read from .env file using react-native-dotenv
+// Values are read from .env file (development) or app.json extra (production)
 
+import Constants from "expo-constants";
 import {
   FIREBASE_API_KEY,
   FIREBASE_AUTH_DOMAIN,
@@ -10,14 +11,37 @@ import {
   FIREBASE_APP_ID,
 } from "@env";
 
-export const firebaseConfig = {
-  apiKey: FIREBASE_API_KEY || "",
-  authDomain: FIREBASE_AUTH_DOMAIN || "",
-  projectId: FIREBASE_PROJECT_ID || "",
-  storageBucket: FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: FIREBASE_APP_ID || "",
+// Get Firebase config from multiple sources (priority order):
+// 1. app.json extra.firebase (for production builds)
+// 2. Environment variables from @env (for development)
+// 3. process.env (fallback)
+const getFirebaseConfig = () => {
+  // Try to get from app.json extra first (for production builds)
+  const extraConfig = Constants.expoConfig?.extra?.firebase;
+  
+  if (extraConfig && extraConfig.apiKey) {
+    return {
+      apiKey: extraConfig.apiKey || "",
+      authDomain: extraConfig.authDomain || "",
+      projectId: extraConfig.projectId || "",
+      storageBucket: extraConfig.storageBucket || "",
+      messagingSenderId: extraConfig.messagingSenderId || "",
+      appId: extraConfig.appId || "",
+    };
+  }
+  
+  // Fallback to environment variables
+  return {
+    apiKey: FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || "",
+    authDomain: FIREBASE_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN || "",
+    projectId: FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "",
+    storageBucket: FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || "",
+    messagingSenderId: FIREBASE_MESSAGING_SENDER_ID || process.env.FIREBASE_MESSAGING_SENDER_ID || "",
+    appId: FIREBASE_APP_ID || process.env.FIREBASE_APP_ID || "",
+  };
 };
+
+export const firebaseConfig = getFirebaseConfig();
 
 // Validate that all required env variables are set
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "") {

@@ -19,7 +19,9 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location to track your work hours and movements.",
         "NSLocationWhenInUseUsageDescription": "We need your location to track your work hours and movements.",
         "NSLocationAlwaysUsageDescription": "We need your location in the background to track your work hours continuously.",
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
@@ -35,11 +37,16 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+          "apiKey": "AIzaSyAmp3doQi5_hJmyesJlAwhetXj_dBrdFrc"
         }
       }
     },
@@ -55,6 +62,19 @@
           "isAndroidForegroundServiceEnabled": true
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "008ff613-6a17-4c20-9946-dcbc4eed897f"
+      },
+      "firebase": {
+        "apiKey": "AIzaSyAmp3doQi5_hJmyesJlAwhetXj_dBrdFrc",
+        "authDomain": "location-tracker-2fea3.firebaseapp.com",
+        "projectId": "location-tracker-2fea3",
+        "storageBucket": "location-tracker-2fea3.firebasestorage.app",
+        "messagingSenderId": "810955879140",
+        "appId": "1:810955879140:web:1d3d59174ff564beacf2f1"
+      }
+    }
   }
 }

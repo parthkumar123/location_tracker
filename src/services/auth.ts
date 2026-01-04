@@ -12,6 +12,10 @@ import { User } from "../types";
 export const authService = {
   // Sign in with email and password
   signIn: async (email: string, password: string): Promise<User> => {
+    if (!auth || !db) {
+      throw new Error("Firebase is not initialized. Please check your configuration.");
+    }
+    
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
@@ -37,6 +41,10 @@ export const authService = {
     displayName: string,
     role: "admin" | "employee"
   ): Promise<User> => {
+    if (!auth || !db) {
+      throw new Error("Firebase is not initialized. Please check your configuration.");
+    }
+    
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       email,
@@ -58,12 +66,15 @@ export const authService = {
 
   // Sign out
   signOut: async (): Promise<void> => {
+    if (!auth) {
+      throw new Error("Firebase is not initialized. Please check your configuration.");
+    }
     await firebaseSignOut(auth);
   },
 
   // Get current user data
   getCurrentUser: async (firebaseUser: FirebaseUser): Promise<User | null> => {
-    if (!firebaseUser) return null;
+    if (!firebaseUser || !db) return null;
 
     const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
 
@@ -78,6 +89,12 @@ export const authService = {
 
   // Listen to auth state changes
   onAuthStateChange: (callback: (user: User | null) => void) => {
+    if (!auth) {
+      // If Firebase is not initialized, call callback with null immediately
+      callback(null);
+      return () => {}; // Return no-op unsubscribe function
+    }
+    
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const user = await authService.getCurrentUser(firebaseUser);

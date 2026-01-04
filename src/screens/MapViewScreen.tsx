@@ -43,6 +43,8 @@ export const MapViewScreen: React.FC = () => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (!db) return;
+    
     loadEmployees();
 
     // Listen to location updates in real-time
@@ -59,7 +61,7 @@ export const MapViewScreen: React.FC = () => {
       unsubscribeLocations();
       unsubscribeUsers();
     };
-  }, []);
+  }, [db]);
 
   // Add rotation animation for refresh icon
   useEffect(() => {
@@ -82,6 +84,8 @@ export const MapViewScreen: React.FC = () => {
   });
 
   const loadEmployees = async (showLoading = false) => {
+    if (!db) return;
+    
     if (showLoading) {
       setRefreshing(true);
     }

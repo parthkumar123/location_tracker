@@ -16,12 +16,18 @@ export default function App() {
 
   useEffect(() => {
     // Listen to auth state changes
-    const unsubscribe = authService.onAuthStateChange((currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    try {
+      const unsubscribe = authService.onAuthStateChange((currentUser) => {
+        setUser(currentUser);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Error setting up auth listener:", error);
+      setLoading(false);
+      return () => {};
+    }
   }, []);
 
   const handleLoginSuccess = (loggedInUser: User) => {

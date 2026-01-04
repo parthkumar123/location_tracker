@@ -112,7 +112,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             {/* Logo/Title */}
             <View style={styles.header}>
               <Text style={styles.title}>Location Tracker</Text>
-              <Text style={styles.subtitle}>Cyberpunk Edition</Text>
+              <Text style={styles.subtitle}>Senso Agrotech Pvt. Ltd. </Text>
             </View>
 
             {/* Login Form */}
